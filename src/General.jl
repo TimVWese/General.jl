@@ -54,7 +54,7 @@ Constructor for an identity `StaticEdge`with dimension `dim`.
 
 See also [`Ie!`](@ref), [`SStaticEdge`](@ref)
 """
-IStaticEdge(dim) 
+function IStaticEdge(dim) 
     return StaticEdge(f=Ie!, dim=dim, coupling=:undirected)
 end
 
