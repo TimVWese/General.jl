@@ -2,4 +2,4 @@ using Documenter, Graphs, General
 
 makedocs(sitename="General")
 
-deploydocs("https://github.com/TimVWese/General.jl")
+deploydocs(repo="https://github.com/TimVWese/General.jl")
