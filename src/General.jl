@@ -18,6 +18,17 @@ using MatrixMarket
 using NetworkDynamics: StaticEdge, ODEVertex
 using LinearAlgebra: norm
 
+"""
+    count_states(es, i, s)
+
+Compute the number of edges in `es` which have state `s` at index `i`.
+
+# Examples
+```jldoctest
+julia> count_states([[1,3], [3,3],[1,1]], 2, 3)
+2
+```
+"""
 function count_states(es, i, s)
     c = 0
     for e in es
