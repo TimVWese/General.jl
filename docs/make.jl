@@ -1,5 +1,5 @@
 using Documenter, Graphs, General
 
-makedocs()
+makedocs(sitename="General")
 
 deploydocs("https://github.com/TimVWese/General.jl")
