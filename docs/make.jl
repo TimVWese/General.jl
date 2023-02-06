@@ -1,3 +1,3 @@
-using Documenter, General
+using Documenter, Graphs, General
 
 makedocs(sitename="General")
