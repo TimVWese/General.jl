@@ -31,11 +31,42 @@ end
     @test vn == [32, 1]
     m_v.f(vn, [32, 111], [[1, 1], [1, 2]], (Θ=0.5,), 0)
     @test vn == [32, 2]
-    m_v = majority_vertex(1, 2; U=4, A=8)
+    m_v = majority_vertex(1, 2; S1=4, S2=8)
     m_v.f(vn, [32, 111], [[18, 2], [8, 2], [4, 2]], (Θ=0.5,), 0)
     @test vn == [4, 111]
     m_v.f(vn, [32, 111], [[4, 4], [8, 4], [8, 4]], (Θ=0.5,), 0)
     @test vn == [8, 111]
+end
+
+@testset "Scale free" begin
+    g1 = SF_configuration_model(4, 2.3; min_d=3)
+    @test nv(g1) == 4
+    @test ne(g1) == 6
+    g2 = SF_configuration_model(6, 50)
+    @test nv(g2) == 6
+    @test ne(g2) == 3
+end
+
+@testset "Spatial network" begin
+    g = spatial_network([0 0; 1 1])
+    @test nv(g) == 2
+    @test ne(g) == 0
+    g = spatial_network([0 0; 1 1]; f=x->1-x)
+    @test nv(g) == 2
+    @test ne(g) == 1
+    g = spatial_network([0 0; 0 1; 1 0; 1 1]; f=x->1*(x>0.9))
+    @test nv(g) == 4
+    @test ne(g) == 4
+    @test !has_edge(g, 1, 4)
+    @test !has_edge(g, 2, 3)
+    g, ps = spatial_network(3, 2; f = x->1.)
+    @test nv(g) == 3
+    @test ne(g) == 0
+    @test size(ps) == (3, 2)
+    @test all(0. .<= ps[:] .<= 1.)
+    g, _ = spatial_network(4, 16; f = x->0.)
+    @test nv(g) == 4
+    @test ne(g) == 3*2*1
 end
 
 @testset "Multiplex" begin
@@ -89,7 +120,19 @@ end
     @test sol[2] == [4, 4, 0, 4, 2, 0, 4, 0, 0, 4, 2, 0]
 end
 
-@testset "connectedness" begin
+@testset "Read/write" begin
+    go = erdos_renyi(20, 0.15)
+    write_to_mtx("g1", go)
+    write_to_mtx("g2.mtx", go)
+    g1 = read_from_mtx("g1.mtx")
+    g2 = read_from_mtx("g2.mtx")
+    @test g1 == go
+    @test g2 == go
+    rm("g1.mtx")
+    rm("g2.mtx")
+end
+
+@testset "Connectedness" begin
     g = Graph()
     while length(connected_components(g)) < 2
         g = erdos_renyi(100, 0.005)
@@ -103,22 +146,3 @@ end
     @test gc == g
 end
 
-@testset "spatial network" begin
-    g = spatial_network([0 0; 1 1])
-    @test nv(g) == 2
-    @test ne(g) == 0
-    g = spatial_network([0 0; 1 1]; f=x->1-x)
-    @test nv(g) == 2
-    @test ne(g) == 1
-    g = spatial_network([0 0; 0 1; 1 0; 1 1]; f=x->1*(x>0.9))
-    @test nv(g) == 4
-    @test ne(g) == 4
-    @test !has_edge(g, 1, 4)
-    @test !has_edge(g, 2, 3)
-    g, _ = spatial_network(3, 2; f = x->1.)
-    @test nv(g) == 3
-    @test ne(g) == 0
-    g, _ = spatial_network(4, 16; f = x->0.)
-    @test nv(g) == 4
-    @test ne(g) == 3*2*1
-end
