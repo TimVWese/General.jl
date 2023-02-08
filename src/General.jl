@@ -78,27 +78,42 @@ function SStaticEdge(selection; invalid=0)
 end
 
 """
-    static_edges, combined_graph = combine_graphs(gs::AbstractGraph...)
+    static_edges, combined_graph = combine_graphs(gs::AbstractGraph...[; dims=[1], invalid=0])
 
 Generate the `combined_graph` which edges are given by the union of the edges of `gs`.
 The goal of this function is offer an interface that allows to use multiplex networks in
 `network_dynamics`. Each argument represents a single layer.
-The array `static_edges` consists of `SStaticEdge`s with `selection==[edge ∈ edges(g) for g in gs]`.
+The array `static_edges` consists of `SStaticEdge`s.
+The named keyword `dims` gives the dimension the `StaticEdge` in each layer ought to have.
+If `length(dims)==1`, all dimensions are equal to `dim[1]`.
+The selection of `static_edges[i]` is given by 
+```
+[[edge ∈ edges(gs[i]) for j in 1:dims[i]] for i in eachindex(gs)]
+```
+The output of the `StaticEdge` dynamics corresponding to non-existing edges is set to `invalid`.
 
 See also [`SStaticEdge`](@ref)
 """
-function combine_graphs(gs::AbstractGraph...)
-    dim = nv(gs[1])
-    combined_graph = Graph(dim)
+function combine_graphs(gs::AbstractGraph...; dims=[1], invalid=0)
+    # Create a graph containing the edges of all input graphs
+    n_verts = nv(gs[1])
+    combined_graph = Graph(n_verts)
     for g in gs
-        @assert dim == nv(g) "Graphs have different number of vertices"
+        @assert n_verts == nv(g) "Graphs have different number of vertices"
         for edge in edges(g)
             add_edge!(combined_graph, edge)
         end
     end
+
+    # Create an array of the selection edges depending on the existence
+    # of edges in the different layers
+    dims = length(dims) == 1 ? dims[1]*ones(Int64, length(gs)) : dims
+    @assert length(gs) == length(dims) "Number og dimensions does not equal number of graphs"
     static_edges = Array{StaticEdge}(undef, ne(combined_graph))
     for (i, edge) in enumerate(edges(combined_graph))
-        static_edges[i] = SStaticEdge([edge ∈ edges(g) for g in gs])
+        static_edges[i] = SStaticEdge(vcat(
+            [[edge ∈ edges(gs[i]) for j in 1:dims[i]] for i in eachindex(gs)]...
+        ); invalid=invalid)
     end
 
     return static_edges, combined_graph
@@ -106,12 +121,11 @@ end
 
 """
     ode_vertices, static_edges, combined_graph =
-        combine_graphs(v_f::Function, gs::AbstractGraph...)
+        combine_graphs(v_f::Function, gs::AbstractGraph...[; dims=[1]])
 
 Generate the `combined_graph` which edges are given by the union of the edges of `gs`.
 The goal of this function is offer an interface that allows to use multiplex networks in
 `network_dynamics`. Each argument represents a single layer.
-The array `static_edges` consists of `SStaticEdge`s with `selection==[edge ∈ edges(g) for g in gs]`.
 This method ought to bes used when the vertex dynamics depend on the degree in each layer.
 
 # Arguments
@@ -121,8 +135,8 @@ vertex in `gs[i]`.
 
 See also [`SStaticEdge`](@ref)
 """
-function combine_graphs(v_f::Function, gs::AbstractGraph...)
-    static_edges, combined_graph = combine_graphs(gs...)
+function combine_graphs(v_f::Function, gs::AbstractGraph...; dims=[1], invalid=0)
+    static_edges, combined_graph = combine_graphs(gs...; dims=dims, invalid=invalid)
     ode_vertices = [v_f([degree(g, v) for g in gs]) for v in vertices(combined_graph)]
     return ode_vertices, static_edges, combined_graph
 end
@@ -167,7 +181,7 @@ julia> SF_configuration_model(4, 40)
 {4, 2} undirected simple Int64 graph
 ```
 
-See also [`random_configuration_model`](@ref)
+See also [`Graphs.SimpleGraphs.random_configuration_model`](https://juliagraphs.org/Graphs.jl/dev/core_functions/simplegraphs_generators/)
 """
 function SF_configuration_model(N, γ; min_d=1)
     v = min_d:(N-1)
@@ -189,7 +203,7 @@ end
 Generate a spatial network with `size(ps, 1)` nodes embedded in ``[0,1]`` `^size(ps,2)`.
 Edge ``(i,j)`` is present with probability `1-f(norm(ps[i,:] - ps[j,:])/norm(ones(size(ps,2))))`
 
-See also [`euclidean_graph`](@ref).
+See also [`Graphs.SimpleGraphs.euclidean_graph`](https://juliagraphs.org/Graphs.jl/dev/core_functions/simplegraphs_generators/)
 """
 function spatial_network(ps::Matrix; f=x -> x)
     N = size(ps, 1)
@@ -213,7 +227,7 @@ end
 Generate a spatial network `g` with `N` nodes embedded in ``[0,1]^d``.
 `ps` contain the generated points on which the edges are based.
 
-See also [`euclidean_graph`](@ref).
+See also [`Graphs.SimpleGraphs.euclidean_graph`](https://juliagraphs.org/Graphs.jl/dev/core_functions/simplegraphs_generators/)
 """
 function spatial_network(N, d=2; f=x -> x)
     ps = rand(N, d)
@@ -257,7 +271,7 @@ end
 Ensure `g` only consists of one component by connecting the largest component
 to each of the other components with one random edge.
 
-See also [`connected_components`](@ref)
+See also [`Graphs.connected_components`](https://juliagraphs.org/Graphs.jl/dev/algorithms/connectivity/)
 """
 function make_connected!(g::AbstractGraph)
     comps = connected_components(g)
