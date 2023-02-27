@@ -9,6 +9,7 @@ export SF_configuration_model
 export spatial_network
 export read_from_mtx, write_to_mtx
 export make_connected!
+export quick_solve!
 
 
 using DifferentialEquations: DiscreteCallback, terminate!
@@ -281,6 +282,35 @@ function make_connected!(g::AbstractGraph)
             add_edge!(g, rand(c), rand(gcc))
         end
     end
+end
+
+function quick_solve!(f, x0, x1, tspan, p; termination_condition=x->false)
+    x0r, x1r = x0, x1 # Reference such that the final state can be copied back to x0
+    for t in tspan[1]+1:tspan[2]
+        if termination_condition(x0r, t)
+            if x0r!=x0
+                x0 .= x0r
+            end
+            return t-1
+        end
+        f(x1r, x0r, p, t)
+        x0r, x1r = x1r, x0r
+    end
+    if x0r!=x0
+        x0 .= x0r
+    end
+    return tspan[end]
+end
+
+function quick_solve!(sol, f, p; termination_condition=x->false)
+    T = length(sol)
+    for t in 1:T-1
+        if termination_condition(sol[t], t)
+            return t
+        end
+        f(sol[t+1], sol[t], p, t+1)
+    end
+    return T
 end
 
 end # end module general
