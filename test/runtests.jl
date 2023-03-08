@@ -38,8 +38,19 @@ end
     @test vn == [8, 111]
 end
 
+@testset "Configuration" begin
+    g = configuration_model([3, 3, 3, 3])
+    @test nv(g) == 4
+    @test ne(g) == 6
+    degs = zeros(Int64, 8000)
+    degs[1:2] .= 1
+    g = configuration_model(degs)
+    @test nv(g) == 8000
+    @test ne(g) == 1
+end
+
 @testset "Scale free" begin
-    g1 = SF_configuration_model(4, 2.3; min_d=3)
+    g1 = SF_configuration_model(4, 2.3; min_d=3, allow_collisions=false)
     @test nv(g1) == 4
     @test ne(g1) == 6
     g2 = SF_configuration_model(6, 50)

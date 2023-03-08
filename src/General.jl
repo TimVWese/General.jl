@@ -5,6 +5,7 @@ export Ie!
 export IStaticEdge, SStaticEdge
 export combine_graphs
 export majority_vertex, majority_termination_cb
+export configuration_model
 export SF_configuration_model
 export spatial_network
 export read_from_mtx, write_to_mtx
@@ -18,6 +19,7 @@ using Graphs
 using MatrixMarket
 using NetworkDynamics: StaticEdge, ODEVertex
 using LinearAlgebra: norm
+using Random: shuffle!
 
 """
     count_states(es, i, s)
@@ -168,23 +170,76 @@ end
 
 majority_termination_cb = DiscreteCallback(majority_termination, terminate!)
 
-"""
-    SF_configuration_model(N, γ; min_d=1)
+# Generate a stub list from a degree distribution
+function to_stublist(degree_seq)
+    stublist = Int64[]
+    for (i, d) in enumerate(degree_seq)
+        append!(stublist, fill(i, d))
+    end
+    return stublist
+end
 
-Contruct a graph (of size `N`) with power-law degree distribution (``P(k)~k^{-γ}``) using
-the configuration model, with minimal degree `min_d`
+"""
+    configuration_model(degree_seq; allow_collisions=true, max_tries=1000)
+
+Contruct a graph with degree distribution `degree_seq` using the configuration model.
+The implementation is based on that of the NetworkX python package.
+
+# Arguments
+- degree_seq::AbstractVector{<:Integer}: degree sequence of the graph
+- allow_collisions::Bool: if `true`, ignore multiple edges between the same pair of nodes and self-loops
+- max_tries::Integer: maximum number of attempts to generate a graph
 
 # Examples
 ```jldoctest
-julia> SF_configuration_model(4, 2.3; min_d=3)
+julia> configuration_model([3, 3, 3, 3]; allow_collisions=false)
+{4, 6} undirected simple Int64 graph
+julia> configuration_model([0, 0])
+{2, 0} undirected simple Int64 graph
+```
+"""
+function configuration_model(degree_seq; allow_collisions=true, max_tries=1000)
+    @assert isgraphical(degree_seq) "Degree sequence is not graphical"
+    N = length(degree_seq)
+    stublist = to_stublist(degree_seq)
+
+    for i in 1:max_tries
+        g = Graph(N)
+        shuffle!(stublist)
+        failed = false
+        i = 1
+        while (i <= length(stublist) && !failed)
+            if !allow_collisions && (stublist[i] == stublist[i+1] || has_edge(g, stublist[i], stublist[i+1]))
+                failed = true
+            else
+                add_edge!(g, stublist[i], stublist[i+1])
+            end
+            i += 2
+        end
+        if !failed
+            return g
+        end
+    end
+    @assert false "Could not generate a graph with the given degree sequence"
+end
+
+"""
+    SF_configuration_model(N, γ; min_d=1, allow_collisions=true)
+
+Contruct a graph (of size `N`) with power-law degree distribution (``P(k)~k^{-γ}``) using
+the configuration model, with minimal degree `min_d`.
+
+# Examples
+```jldoctest
+julia> SF_configuration_model(4, 2.3; min_d=3, allow_collisions=false)
 {4, 6} undirected simple Int64 graph
 julia> SF_configuration_model(4, 40)
 {4, 2} undirected simple Int64 graph
 ```
 
-See also [`Graphs.SimpleGraphs.random_configuration_model`](https://juliagraphs.org/Graphs.jl/dev/core_functions/simplegraphs_generators/)
+See also [`configuration_model`](@ref)
 """
-function SF_configuration_model(N, γ; min_d=1)
+function SF_configuration_model(N, γ; min_d=1, allow_collisions=true)
     v = min_d:(N-1)
     v = v .^ (-1.0 * γ)
     v ./= sum(v)
@@ -195,7 +250,7 @@ function SF_configuration_model(N, γ; min_d=1)
     while !isgraphical(samples)
         samples = rand(dist, N) .+ (min_d - 1)
     end
-    return random_configuration_model(N, samples)
+    return configuration_model(samples; allow_collisions=allow_collisions)
 end
 
 """
