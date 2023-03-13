@@ -80,6 +80,30 @@ function SStaticEdge(selection; invalid=0)
     return StaticEdge(f=f, dim=dim, coupling=:undirected)
 end
 
+struct CombinedGraphIterator
+    gs::Tuple
+    nv::Int
+end
+
+function Base.iterate(cgi::CombinedGraphIterator, state=[1, 0])
+    if state[1] > cgi.nv
+        return nothing
+    end
+    while (state[1] <= cgi.nv)
+        state[2] += 1
+        if state[2] > cgi.nv
+            state[1] += 1
+            state[2] = state[1] + 1
+        end
+        for g in cgi.gs
+            if has_edge(g, state[1], state[2])
+                return (Graphs.SimpleGraphs.SimpleEdge(state...), state)
+            end
+        end
+    end
+    return nothing
+end
+
 """
     static_edges, combined_graph = combine_graphs(gs::AbstractGraph...[; dims=[1], invalid=0])
 
@@ -100,18 +124,16 @@ See also [`SStaticEdge`](@ref)
 function combine_graphs(gs::AbstractGraph...; dims=[1], invalid=0)
     # Create a graph containing the edges of all input graphs
     n_verts = nv(gs[1])
-    combined_graph = Graph(n_verts)
     for g in gs
         @assert n_verts == nv(g) "Graphs have different number of vertices"
-        for edge in edges(g)
-            add_edge!(combined_graph, edge)
-        end
     end
+    edge_iter = CombinedGraphIterator(gs, n_verts)
+    combined_graph = Graphs.SimpleGraphs.SimpleGraphFromIterator(edge_iter)
 
     # Create an array of the selection edges depending on the existence
     # of edges in the different layers
     dims = length(dims) == 1 ? dims[1]*ones(Int64, length(gs)) : dims
-    @assert length(gs) == length(dims) "Number og dimensions does not equal number of graphs"
+    @assert length(gs) == length(dims) "Number of dimensions does not equal number of graphs"
     static_edges = Array{StaticEdge}(undef, ne(combined_graph))
     for (i, edge) in enumerate(edges(combined_graph))
         static_edges[i] = SStaticEdge(vcat(

@@ -39,7 +39,7 @@ end
 end
 
 @testset "Configuration" begin
-    g = configuration_model([3, 3, 3, 3])
+    g = configuration_model([3, 3, 3, 3]; allow_collisions=false)
     @test nv(g) == 4
     @test ne(g) == 6
     degs = zeros(Int64, 8000)
