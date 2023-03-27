@@ -80,6 +80,25 @@ end
     @test ne(g) == 3*2*1
 end
 
+@testset "Permuted circle graph" begin
+    g = permuted_circle(4, 0)
+    @test nv(g) == 4
+    @test ne(g) == 4
+    @test has_edge(g, 1, 2)
+    @test has_edge(g, 2, 3)
+    @test has_edge(g, 3, 4)
+    @test has_edge(g, 4, 1)
+    @test diameter(g) == 2
+
+    g = permuted_circle(8, 100)
+    @test nv(g) == 8
+    @test ne(g) == 8
+    for d in degree(g)
+        @test d == 2
+    end
+    @test diameter(g) == 4
+end
+
 @testset "Multiplex" begin
     @test_throws AssertionError combine_graphs(Graph(2), Graph(3))
     # test the output Static edges and combined graph in simple case
@@ -223,4 +242,6 @@ end
     make_connected!(g)
     @test gc == g
 end
+
+
 

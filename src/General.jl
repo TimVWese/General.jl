@@ -8,6 +8,7 @@ export majority_vertex, majority_termination_cb
 export configuration_model
 export SF_configuration_model
 export spatial_network
+export permuted_circle
 export read_from_mtx, write_to_mtx
 export make_connected!
 export quick_solve!
@@ -18,7 +19,7 @@ using Distributions: Categorical
 using Graphs
 using MatrixMarket
 using NetworkDynamics: StaticEdge, ODEVertex
-using LinearAlgebra: norm
+using LinearAlgebra: norm, Symmetric
 using Random: shuffle!
 
 """
@@ -310,6 +311,30 @@ See also [`Graphs.SimpleGraphs.euclidean_graph`](https://juliagraphs.org/Graphs.
 function spatial_network(N, d=2; f=x -> x)
     ps = rand(N, d)
     return spatial_network(ps; f=f), ps
+end
+
+"""
+    g = permuted_circle(n, nb_permutations)
+
+Generate a graph with `n` nodes on a circle (1D periodic grid), i.e. each node is connected to two other nodes.
+However, the nodes are permuted randomly `nb_permutations` times, i.e the ordering of the vertices does
+not correspond to the ordering on the circle anymore.
+
+# Examples
+```jldoctest
+julia> g = permuted_circle(4, 1)
+{4, 4} undirected simple Int64 graph
+```
+"""
+function permuted_circle(n, nb_permutations)
+    adj_matrix = adjacency_matrix(grid((n,); periodic=true))
+    for _ in 1:nb_permutations
+        node1 = rand(1:n)
+        node2 = rand(1:n)
+        adj_matrix[:, [node1, node2]] .= adj_matrix[:, [node2, node1]]
+        adj_matrix[[node1, node2], :] .= adj_matrix[[node2, node1], :]
+    end
+    return Graph(Symmetric(adj_matrix))
 end
 
 function append_mtx(filename)
