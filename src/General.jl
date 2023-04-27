@@ -9,6 +9,7 @@ export configuration_model
 export SF_configuration_model
 export spatial_network
 export permuted_circle
+export conditional_degree_distribution
 export read_from_mtx, write_to_mtx
 export make_connected!
 export quick_solve!
@@ -342,6 +343,31 @@ function append_mtx(filename)
         filename = filename * ".mtx"
     end
     return filename
+end
+
+"""
+
+    conditional_degree_distribution(g::AbstractGraph)
+
+Calculate the conditional degree distribution of a given graph `g`. The 
+conditional degree distribution is a matrix `P` where each element `P[i,j]` 
+represents the probability that a node with degree `i` is connected to a node 
+with degree `j`.
+"""
+function conditional_degree_distribution(g::AbstractGraph)
+    d = degree(g)
+
+    P = zeros(Float64, (maximum(d), maximum(d)))
+    for i in 1:nv(g)
+        di = d[i]
+        for j in neighbors(g, i)
+            P[di, d[j]] += 1
+        end
+    end
+    for d in unique(d)
+        P[d,:] /= sum(P[d,:])
+    end
+    return P
 end
 
 """

@@ -1,4 +1,5 @@
 using General
+using Random
 using Test, Graphs
 using NetworkDynamics
 using DifferentialEquations
@@ -215,6 +216,24 @@ end
         2, 2, 4, 0, -2,
         2, 1, 3, 1, -1,
     ]
+end
+
+@testset "conditional degree" begin
+    is_valid = v -> all(x->(isapprox(1.0,x)||isapprox(0.0,x)), v)
+
+    Random.seed!(1234)
+    g1 = erdos_renyi(20, 0.2)
+    P1 = conditional_degree_distribution(g1)
+    @test size(P1) == (maximum(degree(g1)), maximum(degree(g1)))
+    @test is_valid(sum(P1, dims=2))
+    @test all(0 .<= P1 .<= 1)
+
+    g3 = grid((10, 10), periodic=true)
+    P3 = conditional_degree_distribution(g3)
+    @test size(P3) == (4, 4)
+    @test is_valid(sum(P3, dims=2))
+    @test P3[4,4] ≈ 1.0
+    @test sum(P3, dims=[1,2])[1] ≈ 1.0
 end
 
 @testset "Read/write" begin
