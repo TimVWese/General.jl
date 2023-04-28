@@ -4,6 +4,8 @@ using Test, Graphs
 using NetworkDynamics
 using DifferentialEquations
 
+Random.seed!(1234)
+
 @testset "Basic functionality" begin
     es = [
         [1, 2],
@@ -221,7 +223,6 @@ end
 @testset "conditional degree" begin
     is_valid = v -> all(x->(isapprox(1.0,x)||isapprox(0.0,x)), v)
 
-    Random.seed!(1234)
     g1 = erdos_renyi(20, 0.2)
     P1 = conditional_degree_distribution(g1)
     @test size(P1) == (maximum(degree(g1)), maximum(degree(g1)))
