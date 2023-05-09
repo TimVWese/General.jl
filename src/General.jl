@@ -35,13 +35,7 @@ julia> count_states([[1,3], [3,3],[1,1]], 2, 3)
 ```
 """
 function count_states(es, i, s)
-    c = 0
-    for e in es
-        if e[i] == s
-            c += 1
-        end
-    end
-    return c
+    return count(e -> e[i] == s, es)
 end
 
 """
@@ -59,7 +53,7 @@ Constructor for an identity `StaticEdge`with dimension `dim`.
 
 See also [`Ie!`](@ref), [`SStaticEdge`](@ref)
 """
-function IStaticEdge(dim) 
+function IStaticEdge(dim)
     return StaticEdge(f=Ie!, dim=dim, coupling=:undirected)
 end
 
@@ -134,13 +128,13 @@ function combine_graphs(gs::AbstractGraph...; dims=[1], invalid=0)
 
     # Create an array of the selection edges depending on the existence
     # of edges in the different layers
-    dims = length(dims) == 1 ? dims[1]*ones(Int64, length(gs)) : dims
+    dims = length(dims) == 1 ? dims[1] * ones(Int64, length(gs)) : dims
     @assert length(gs) == length(dims) "Number of dimensions does not equal number of graphs"
     static_edges = Array{StaticEdge}(undef, ne(combined_graph))
     for (i, edge) in enumerate(edges(combined_graph))
         static_edges[i] = SStaticEdge(vcat(
-            [[edge ∈ edges(gs[i]) for j in 1:dims[i]] for i in eachindex(gs)]...
-        ); invalid=invalid)
+                [[edge ∈ edges(gs[i]) for j in 1:dims[i]] for i in eachindex(gs)]...
+            ); invalid=invalid)
     end
 
     return static_edges, combined_graph
@@ -365,7 +359,7 @@ function conditional_degree_distribution(g::AbstractGraph)
         end
     end
     for d in unique(d)
-        P[d,:] /= sum(P[d,:])
+        P[d, :] /= sum(P[d, :])
     end
     return P
 end
