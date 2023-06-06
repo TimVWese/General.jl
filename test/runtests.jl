@@ -237,7 +237,7 @@ end
     @test sum(P3, dims=[1,2])[1] ≈ 1.0
 end
 
-@testset "Read/write" begin
+@testset "Read/write mtx" begin
     go = erdos_renyi(20, 0.15)
     write_to_mtx("g1", go)
     write_to_mtx("g2.mtx", go)
@@ -247,6 +247,29 @@ end
     @test g2 == go
     rm("g1.mtx")
     rm("g2.mtx")
+end
+
+@testset "Read tsv" begin
+       # Test undirected graph
+       g = read_from_tsv("test.tsv")
+       @test nv(g) == 4
+       @test ne(g) == 3
+       @test isequal(typeof(g), SimpleGraph{Int64})
+   
+       # Test directed graph
+       g = read_from_tsv("test.tsv", directed=true)
+       @test nv(g) == 4
+       @test ne(g) == 4
+       @test isequal(typeof(g), SimpleDiGraph{Int64})
+   
+       # Test reading only first two lines
+       g = read_from_tsv("test.tsv", N=2)
+       @test nv(g) == 2
+       @test ne(g) == 1
+       @test isequal(typeof(g), SimpleGraph{Int64})
+   
+       # Test reading non-existent file
+       @test_throws SystemError read_from_tsv("nonexistent.tsv")   
 end
 
 @testset "Connectedness" begin

@@ -11,6 +11,7 @@ export spatial_network
 export permuted_circle
 export conditional_degree_distribution
 export read_from_mtx, write_to_mtx
+export read_from_tsv
 export make_connected!
 export quick_solve!
 
@@ -22,6 +23,7 @@ using MatrixMarket
 using NetworkDynamics: StaticEdge, ODEVertex
 using LinearAlgebra: norm, Symmetric
 using Random: shuffle!
+using Logging
 
 """
     count_states(es, i, s)
@@ -386,6 +388,60 @@ See also [`read_from_mtx`](@ref)
 function write_to_mtx(filename, g::AbstractGraph)
     filename = append_mtx(filename)
     mmwrite(filename, adjacency_matrix(g))
+end
+
+"""
+    read_from_tsv(filename; N::Int64=typemax(Int64), directed=false)
+
+Construct a simple graph from a tsv file. The file should contain two columns
+with the source and destination of each edge.
+
+# Arguments
+- `filename`: The path to the file
+- `N`: The number of lines to read. If `N` is smaller than the number of lines
+  in the file, only the first `N` lines are read.
+- `directed`: If `true`, the graph is directed, otherwise it is undirected.
+
+# Examples
+```jldoctest
+julia> g = read_from_tsv("test.tsv")
+{4, 3} undirected simple Int64 graph
+
+julia> g = read_from_tsv("test.tsv"; N=2, directed=true)
+{4, 2} directed simple Int64 graph
+```
+with `test.tsv`:
+```
+1	4
+4   1
+2	4
+3	4
+```
+"""
+function read_from_tsv(filename; N::Int64=typemax(Int64), directed=false)
+    graph = directed ? DiGraph() : Graph()
+
+    for (num, line) in enumerate(eachline(filename))
+        line = split(line, '\t')
+
+        try
+            src = parse(Int64, line[1])
+            dst = parse(Int64, line[2])
+
+            if nv(graph) < max(src, dst)
+                add_vertices!(graph, max(src, dst) - nv(graph))
+            end
+            add_edge!(graph, src, dst)
+        catch
+            @warn "Could not parse line $num"
+            continue
+        end
+
+        if num >= N
+            return graph
+        end
+    end
+    return graph
 end
 
 """
