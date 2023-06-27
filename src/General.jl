@@ -523,8 +523,6 @@ end
 Construct a random simplicial complex on `n` vertices. The probability of
 including a simplex of dimension `k` is `p[k]`, if all of its facets are in the complex.
 If `connected` is `true`, the function will give an AssertionError, if the graph is not.
-
-! Probably not correct at the moment
 """
 function random_simplicial_complex(n, p::Vector; connected=true)
     g = erdos_renyi(n, p[1])
@@ -538,13 +536,13 @@ function random_simplicial_complex(n, p::Vector; connected=true)
             push!(all_simplices[k], simplex)
         end
     end
-    simplices = [[] for _ in 1:max_k]
-    simplices[1] = [[e.src, e.dst] for e in edges(g)]
+    simplices = [Array{Set{Int64}}(undef, 0) for _ in 1:max_k]
+    simplices[1] = [Set([e.src, e.dst]) for e in edges(g)]
     for k in 2:max_k
         for s in all_simplices[k]
             # Check if all facets are already in the complex
             for facet in combinations(collect(s), k)
-                if !(facet in simplices[k-1])
+                if !(Set(facet) in simplices[k-1])
                     @goto next_simplex
                 end
             end
