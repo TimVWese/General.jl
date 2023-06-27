@@ -3,6 +3,7 @@ using Random
 using Test, Graphs
 using NetworkDynamics
 using DifferentialEquations
+using Simplicial: SimplicialComplex
 
 Random.seed!(1234)
 
@@ -65,22 +66,22 @@ end
     g = spatial_network([0 0; 1 1])
     @test nv(g) == 2
     @test ne(g) == 0
-    g = spatial_network([0 0; 1 1]; f=x->1-x)
+    g = spatial_network([0 0; 1 1]; f=x -> 1 - x)
     @test nv(g) == 2
     @test ne(g) == 1
-    g = spatial_network([0 0; 0 1; 1 0; 1 1]; f=x->1*(x>0.9))
+    g = spatial_network([0 0; 0 1; 1 0; 1 1]; f=x -> 1 * (x > 0.9))
     @test nv(g) == 4
     @test ne(g) == 4
     @test !has_edge(g, 1, 4)
     @test !has_edge(g, 2, 3)
-    g, ps = spatial_network(3, 2; f = x->1.)
+    g, ps = spatial_network(3, 2; f=x -> 1.0)
     @test nv(g) == 3
     @test ne(g) == 0
     @test size(ps) == (3, 2)
-    @test all(0. .<= ps[:] .<= 1.)
-    g, _ = spatial_network(4, 16; f = x->0.)
+    @test all(0.0 .<= ps[:] .<= 1.0)
+    g, _ = spatial_network(4, 16; f=x -> 0.0)
     @test nv(g) == 4
-    @test ne(g) == 3*2*1
+    @test ne(g) == 3 * 2 * 1
 end
 
 @testset "Permuted circle graph" begin
@@ -105,7 +106,7 @@ end
 @testset "Multiplex" begin
     @test_throws AssertionError combine_graphs(Graph(2), Graph(3))
     # test the output Static edges and combined graph in simple case
-    g1 = grid((2,2))
+    g1 = grid((2, 2))
     g2 = Graph(4)
     add_edge!(g2, 1, 2)
     add_edge!(g2, 1, 4)
@@ -160,7 +161,7 @@ end
             vn[1:2:6] .= ds
             vn[2:2:6] .= 0
             for e in es
-               vn[2:2:6] .+= e[2:2:6]
+                vn[2:2:6] .+= e[2:2:6]
             end
         end
         return ODEVertex(f=f, dim=6)
@@ -185,16 +186,16 @@ end
             vn[4] = ds[2]
             vn[2] = 0
             vn[3] = ds[1]
-            vn[5] = 0 
-            idxs = [false, true, true, false,true]
+            vn[5] = 0
+            idxs = [false, true, true, false, true]
             for e in es
-               vn[idxs] += e[idxs]
+                vn[idxs] += e[idxs]
             end
         end
         return ODEVertex(f=f, dim=5)
     end
 
-    vs, ses, cg = combine_graphs(het_dim_f, g1, g2; dims=[3,2])
+    vs, ses, cg = combine_graphs(het_dim_f, g1, g2; dims=[3, 2])
     nd = network_dynamics(vs, ses, cg)
     u0 = ones(Int64, 20)
     prob = DiscreteProblem(nd, u0, (0, 1))
@@ -207,7 +208,7 @@ end
     ]
 
     # test alternative invalid
-    vs, ses, cg = combine_graphs(het_dim_f, g1, g2; dims=[3,2], invalid=-1)
+    vs, ses, cg = combine_graphs(het_dim_f, g1, g2; dims=[3, 2], invalid=-1)
     nd = network_dynamics(vs, ses, cg)
     u0 = ones(Int64, 20)
     prob = DiscreteProblem(nd, u0, (0, 1))
@@ -221,7 +222,7 @@ end
 end
 
 @testset "conditional degree" begin
-    is_valid = v -> all(x->(isapprox(1.0,x)||isapprox(0.0,x)), v)
+    is_valid = v -> all(x -> (isapprox(1.0, x) || isapprox(0.0, x)), v)
 
     g1 = erdos_renyi(20, 0.2)
     P1 = conditional_degree_distribution(g1)
@@ -233,8 +234,8 @@ end
     P3 = conditional_degree_distribution(g3)
     @test size(P3) == (4, 4)
     @test is_valid(sum(P3, dims=2))
-    @test P3[4,4] ≈ 1.0
-    @test sum(P3, dims=[1,2])[1] ≈ 1.0
+    @test P3[4, 4] ≈ 1.0
+    @test sum(P3, dims=[1, 2])[1] ≈ 1.0
 end
 
 @testset "Read/write mtx" begin
@@ -250,26 +251,26 @@ end
 end
 
 @testset "Read tsv" begin
-       # Test undirected graph
-       g = read_from_tsv("test.tsv")
-       @test nv(g) == 4
-       @test ne(g) == 3
-       @test isequal(typeof(g), SimpleGraph{Int64})
-   
-       # Test directed graph
-       g = read_from_tsv("test.tsv", directed=true)
-       @test nv(g) == 4
-       @test ne(g) == 4
-       @test isequal(typeof(g), SimpleDiGraph{Int64})
-   
-       # Test reading only first two lines
-       g = read_from_tsv("test.tsv", N=2)
-       @test nv(g) == 2
-       @test ne(g) == 1
-       @test isequal(typeof(g), SimpleGraph{Int64})
-   
-       # Test reading non-existent file
-       @test_throws SystemError read_from_tsv("nonexistent.tsv")   
+    # Test undirected graph
+    g = read_from_tsv("test.tsv")
+    @test nv(g) == 4
+    @test ne(g) == 3
+    @test isequal(typeof(g), SimpleGraph{Int64})
+
+    # Test directed graph
+    g = read_from_tsv("test.tsv", directed=true)
+    @test nv(g) == 4
+    @test ne(g) == 4
+    @test isequal(typeof(g), SimpleDiGraph{Int64})
+
+    # Test reading only first two lines
+    g = read_from_tsv("test.tsv", N=2)
+    @test nv(g) == 2
+    @test ne(g) == 1
+    @test isequal(typeof(g), SimpleGraph{Int64})
+
+    # Test reading non-existent file
+    @test_throws SystemError read_from_tsv("nonexistent.tsv")
 end
 
 @testset "Connectedness" begin
@@ -286,5 +287,89 @@ end
     @test gc == g
 end
 
+@testset "Vietoris-Rips tests" begin
+    # Test 2D points
+    points = [0 1 2 3; 0 0 0 0]
+    sc = vietoris_rips(points, 1.5)
+    @test length(sc.vertices) == 4
+    @test length(sc.facets) == 3
+    @test all(length.(sc.facets) .== 2)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+
+    # Test 3D points
+    points = [0 1 2 3; 0 0 0 0; 0 0 0 0]
+    sc = vietoris_rips(points, 1.5)
+    @test length(sc.vertices) == 4
+    @test length(sc.facets) == 3
+    @test all(length.(sc.facets) .== 2)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+
+    # Test negative epsilon
+    points = [0 1 2 3; 0 0 0 0]
+    sc = vietoris_rips(points, -1.5)
+    @test length(sc.vertices) == 4
+    @test length(sc.facets) == 1
+    @test all(length.(sc.facets) .== 4)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+end
+
+@testset "Min k Vietoris Rips complex" begin
+    # Test 2D points
+    sc = vietoris_rips_mink(10; min_k=2)
+    @test length(sc.vertices) == 10
+    @test length(sc.facets) > 0
+    @test all(sc.dimensions .>= 2)
+    @test any(sc.dimensions .== 2)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+
+    # Test 3D points
+    sc = vietoris_rips_mink(10; d=3)
+    @test length(sc.vertices) == 10
+    @test length(sc.facets) > 0
+    @test all(sc.dimensions .>= 2) broken=true
+    @test any(sc.dimensions .== 2)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+
+    # Test higher-dimensional points
+    sc = vietoris_rips_mink(10; d=2, min_k=5)
+    @test length(sc.vertices) == 10
+    @test length(sc.facets) > 0
+    @test all(sc.dimensions .>= 5)
+    @test any(sc.dimensions .== 5)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+end
+
+@testset "Random Simplicial Complex" begin
+    # General test
+    sc = random_simplicial_complex(10, [0.5, 0.2, 0.1])
+    @test length(sc.vertices) == 10
+    @test length(sc.facets) > 0
+    @test all(sc.dimensions .>= 0)
+    @test all(sc.dimensions .<= 3)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+
+    # Test 1D complex
+    sc = random_simplicial_complex(5, [1.0])
+    @test length(sc.vertices) == 5
+    @test length(sc.facets) == 10
+    @test all(sc.dimensions .== 1)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+
+    # Test 3D complex
+    sc = random_simplicial_complex(5, [1.0, 1.0, 1.0])
+    @test length(sc.vertices) == 5
+    @test all(sc.dimensions .== 3)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+
+    # Test 5D complex
+    sc = random_simplicial_complex(6, [1.0, 1.0, 1.0, 1.0, 1.0])
+    @test length(sc.vertices) == 6
+    @test length(sc.facets) == 1
+    @test all(sc.dimensions .== 5)
+    @test isequal(typeof(sc), SimplicialComplex{Int64})
+
+    # Test connected complex
+    @test_throws AssertionError sc = random_simplicial_complex(10, [0.0, 0.2, 0.1])
+end
 
 

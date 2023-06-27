@@ -20,7 +20,7 @@ using DifferentialEquations: DiscreteCallback, terminate!
 using Distributions: Categorical
 using Graphs
 using MatrixMarket
-using Simplicial
+using Simplicial: SimplicialComplex
 using NetworkDynamics: StaticEdge, ODEVertex
 using LinearAlgebra: norm, Symmetric
 using Combinatorics: combinations
@@ -492,12 +492,12 @@ end
     vietoris_rips(points, epsilon)
 
 Construct the Vietoris-Rips complex of a set of points in Euclidean space.
-! Not sure if this is the actual definition of the Vietoris-Rips complex.
 
 # Arguments
 - `points`: A matrix of size `d` x `n` where `d` is the dimension of the
   Euclidean space and `n` is the number of points.
-- `epsilon`: The radius of the balls used to construct the complex.
+- `epsilon`: The radius of the balls used to construct the complex. If `epsilon`
+  is negative, it will be interpreted as `Inf`.
 """
 function vietoris_rips(points, epsilon)
     gg, _ = euclidean_graph(points; cutoff=epsilon)
@@ -510,6 +510,8 @@ end
 Construct the Vietoris-Rips complex of `n` random points in `d`-dimensional
 Euclidean space. The radius of the balls is chosen such each point is at least
 part of a `min_k` dimensional complex.
+
+Current implementation and possibly idea do not make much sense!
 """
 function vietoris_rips_mink(n; d=2, min_k=2)
     ps = rand(d, n)
@@ -518,16 +520,16 @@ function vietoris_rips_mink(n; d=2, min_k=2)
 end
 
 """
-    random_simplicial_complex(n, p::Vector; connected=true)
+    random_simplicial_complex(n, p::Vector)
 
 Construct a random simplicial complex on `n` vertices. The probability of
 including a simplex of dimension `k` is `p[k]`, if all of its facets are in the complex.
-If `connected` is `true`, the function will give an AssertionError, if the graph is not.
+The function will give an AssertionError, if the graph is not connected.
 """
 function random_simplicial_complex(n, p::Vector; connected=true)
     g = erdos_renyi(n, p[1])
     max_k = length(p)
-    @assert !connected || is_connected(g) "Graph is not connected"
+    @assert is_connected(g) "Graph is not connected"
     full_complex = SimplicialComplex(maximal_cliques(g))
     all_simplices = [[] for _ in 1:max_k]
     for simplex in full_complex
