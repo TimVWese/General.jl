@@ -13,15 +13,17 @@ export conditional_degree_distribution
 export read_from_mtx, write_to_mtx
 export read_from_tsv
 export make_connected!
-export quick_solve!
-
+export vietoris_rips, vietoris_rips_mink
+export random_simplicial_complex
 
 using DifferentialEquations: DiscreteCallback, terminate!
 using Distributions: Categorical
 using Graphs
 using MatrixMarket
+using Simplicial
 using NetworkDynamics: StaticEdge, ODEVertex
 using LinearAlgebra: norm, Symmetric
+using Combinatorics: combinations
 using Random: shuffle!
 using Logging
 
@@ -462,4 +464,96 @@ function make_connected!(g::AbstractGraph)
     end
 end
 
+#######################
+# Simplicial complexes
+#######################
+"""
+    find_r(ps::Matrix{Float64}, k::Int, eps::Float64=1e-6)
+
+Find the smallest radius `r` such that each of the points `ps` has distance less
+than `r` to at least `k` other points.
+""" 
+function find_r(ps::Matrix{Float64}, k::Int, eps::Float64=1e-6)
+    r_min = 0.0
+    r_max = maximum(norm, eachcol(ps))
+    while r_max - r_min > eps
+        r = (r_min + r_max) / 2
+        counts = [count(p -> norm(p - q) <= r, eachcol(ps)) - 1 for q in eachcol(ps)]
+        if all(counts .>= k)
+            r_max = r
+        else
+            r_min = r
+        end
+    end
+    return r_max
+end
+
+"""
+    vietoris_rips(points, epsilon)
+
+Construct the Vietoris-Rips complex of a set of points in Euclidean space.
+! Not sure if this is the actual definition of the Vietoris-Rips complex.
+
+# Arguments
+- `points`: A matrix of size `d` x `n` where `d` is the dimension of the
+  Euclidean space and `n` is the number of points.
+- `epsilon`: The radius of the balls used to construct the complex.
+"""
+function vietoris_rips(points, epsilon)
+    gg, _ = euclidean_graph(points; cutoff=epsilon)
+    return SimplicialComplex(maximal_cliques(gg))
+end
+
+"""
+    vietoris_rips_mink(n; d=2, min_k=2)
+
+Construct the Vietoris-Rips complex of `n` random points in `d`-dimensional
+Euclidean space. The radius of the balls is chosen such each point is at least
+part of a `min_k` dimensional complex.
+"""
+function vietoris_rips_mink(n; d=2, min_k=2)
+    ps = rand(d, n)
+    r = find_r(ps, min_k)
+    return vietoris_rips(ps, r)
+end
+
+"""
+    random_simplicial_complex(n, p::Vector; connected=true)
+
+Construct a random simplicial complex on `n` vertices. The probability of
+including a simplex of dimension `k` is `p[k]`, if all of its facets are in the complex.
+If `connected` is `true`, the function will give an AssertionError, if the graph is not.
+
+! Probably not correct at the moment
+"""
+function random_simplicial_complex(n, p::Vector; connected=true)
+    g = erdos_renyi(n, p[1])
+    max_k = length(p)
+    @assert !connected || is_connected(g) "Graph is not connected"
+    full_complex = SimplicialComplex(maximal_cliques(g))
+    all_simplices = [[] for _ in 1:max_k]
+    for simplex in full_complex
+        k = length(simplex) - 1
+        if 2 <= k <= max_k
+            push!(all_simplices[k], simplex)
+        end
+    end
+    simplices = [[] for _ in 1:max_k]
+    simplices[1] = [[e.src, e.dst] for e in edges(g)]
+    for k in 2:max_k
+        for s in all_simplices[k]
+            # Check if all facets are already in the complex
+            for facet in combinations(collect(s), k)
+                if !(facet in simplices[k-1])
+                    @goto next_simplex
+                end
+            end
+            if rand() < p[k]
+                push!(simplices[k], s)
+            end
+            @label next_simplex
+        end
+    end
+    return SimplicialComplex(vcat(simplices...))
+end
 end # end module general
