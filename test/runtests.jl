@@ -221,6 +221,51 @@ end
     ]
 end
 
+@testset "get_degree_distribution" begin
+    # Test empty graph
+    g = Graph(0)
+    degree_list, degree_counts = get_degree_distribution(g)
+    @test length(degree_list) == 0
+    @test length(degree_counts) == 0
+
+    # Test graph with one node
+    g = Graph(1)
+    degree_list, degree_counts = get_degree_distribution(g)
+    @test length(degree_list) == 1
+    @test length(degree_counts) == 1
+    @test degree_list[1] == 0
+    @test degree_counts[1] == 1
+
+    # Test graph with two nodes and one edge
+    g = Graph(2)
+    add_edge!(g, 1, 2)
+    degree_list, degree_counts = get_degree_distribution(g)
+    @test length(degree_list) == 1
+    @test length(degree_counts) == 1
+    @test degree_list[1] == 1
+    @test degree_counts[1] == 2
+
+    # Test graph with three nodes and two edges
+    g = Graph(3)
+    add_edge!(g, 1, 2)
+    add_edge!(g, 2, 3)
+    degree_list, degree_counts = get_degree_distribution(g)
+    @test length(degree_list) == 2
+    @test length(degree_counts) == 2
+    @test degree_list[1] == 1
+    @test degree_counts[1] == 2
+    @test degree_list[2] == 2
+    @test degree_counts[2] == 1
+
+    # Test 6-dimensional grid
+    g = grid((3, 3, 3), periodic=true)
+    degree_list, degree_counts = get_degree_distribution(g)
+    @test length(degree_list) == 1
+    @test length(degree_counts) == 1
+    @test degree_list[1] == 6
+    @test degree_counts[1] == 27
+end
+
 @testset "conditional degree" begin
     is_valid = v -> all(x -> (isapprox(1.0, x) || isapprox(0.0, x)), v)
 
@@ -326,7 +371,7 @@ end
     sc = vietoris_rips_mink(10; d=3)
     @test length(sc.vertices) == 10
     @test length(sc.facets) > 0
-    @test all(sc.dimensions .>= 2) broken=true
+    @test all(sc.dimensions .>= 2) broken = true
     @test any(sc.dimensions .== 2)
     @test isequal(typeof(sc), SimplicialComplex{Int64})
 
@@ -371,5 +416,3 @@ end
     # Test connected complex
     @test_throws AssertionError sc = random_simplicial_complex(10, [0.0, 0.2, 0.1])
 end
-
-

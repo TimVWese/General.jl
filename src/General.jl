@@ -9,10 +9,11 @@ export configuration_model
 export SF_configuration_model
 export spatial_network
 export permuted_circle
+export make_connected!
+export get_degree_distribution
 export conditional_degree_distribution
 export read_from_mtx, write_to_mtx
 export read_from_tsv
-export make_connected!
 export vietoris_rips, vietoris_rips_mink
 export random_simplicial_complex
 
@@ -336,11 +337,46 @@ function permuted_circle(n, nb_permutations)
     return Graph(Symmetric(adj_matrix))
 end
 
-function append_mtx(filename)
-    if length(filename) < 4 || filename[end-3:end] != ".mtx"
-        filename = filename * ".mtx"
+"""
+    make_connected!(g::AbstractGraph)
+
+Ensure `g` only consists of one component by connecting the largest component
+to each of the other components with one random edge.
+
+See also [`Graphs.connected_components`](https://juliagraphs.org/Graphs.jl/dev/algorithms/connectivity/)
+"""
+function make_connected!(g::AbstractGraph)
+    comps = connected_components(g)
+    gcc = comps[argmax(length.(comps))]
+    for c in comps
+        if c != gcc
+            add_edge!(g, rand(c), rand(gcc))
+        end
     end
-    return filename
+end
+
+"""
+    get_degree_distribution(g::Graph)
+
+Calculate the degree distribution of a given graph `g` as a tuple
+`(degree_list, degree_counts)`, such that `degree_counts[i]` is the number of
+nodes with degree `degree_list[i]`.
+
+# Examples
+```jldoctest
+julia> get_degree_distribution(grid((3, 3, 3), periodic=true))
+([6,], [27,])
+```
+
+"""
+function get_degree_distribution(g::Graph)
+    degrees = degree(g)
+    if isempty(degrees)
+        return [], []
+    end
+    degree_list = collect(minimum(degrees):maximum(degrees))
+    degree_counts = [count(x -> x == d, degrees) for d in degree_list]
+    return degree_list, degree_counts
 end
 
 """
@@ -366,6 +402,13 @@ function conditional_degree_distribution(g::AbstractGraph)
         P[d, :] /= sum(P[d, :])
     end
     return P
+end
+
+function append_mtx(filename)
+    if length(filename) < 4 || filename[end-3:end] != ".mtx"
+        filename = filename * ".mtx"
+    end
+    return filename
 end
 
 """
@@ -446,24 +489,6 @@ function read_from_tsv(filename; N::Int64=typemax(Int64), directed=false)
     return graph
 end
 
-"""
-    make_connected!(g::AbstractGraph)
-
-Ensure `g` only consists of one component by connecting the largest component
-to each of the other components with one random edge.
-
-See also [`Graphs.connected_components`](https://juliagraphs.org/Graphs.jl/dev/algorithms/connectivity/)
-"""
-function make_connected!(g::AbstractGraph)
-    comps = connected_components(g)
-    gcc = comps[argmax(length.(comps))]
-    for c in comps
-        if c != gcc
-            add_edge!(g, rand(c), rand(gcc))
-        end
-    end
-end
-
 #######################
 # Simplicial complexes
 #######################
@@ -472,7 +497,7 @@ end
 
 Find the smallest radius `r` such that each of the points `ps` has distance less
 than `r` to at least `k` other points.
-""" 
+"""
 function find_r(ps::Matrix{Float64}, k::Int, eps::Float64=1e-6)
     r_min = 0.0
     r_max = maximum(norm, eachcol(ps))
