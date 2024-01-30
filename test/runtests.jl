@@ -133,7 +133,7 @@ end
     u0 = ones(Int64, 12)
     prob = DiscreteProblem(nd, u0, (0, 1))
     sol = solve(prob, FunctionMap())
-    @test sol[2] == [2, 2, 0, 2, 1, 0, 2, 0, 0, 2, 1, 0]
+    @test sol[:, 2] == [2, 2, 0, 2, 1, 0, 2, 0, 0, 2, 1, 0]
 
     # Test the dynamics with degrees, but one-dimesnionals
     complex_f(ds) = begin
@@ -153,7 +153,7 @@ end
     u0 = ones(Int64, 12)
     prob = DiscreteProblem(nd, u0, (0, 1))
     sol = solve(prob, FunctionMap())
-    @test sol[2] == [4, 4, 0, 4, 2, 0, 4, 0, 0, 4, 2, 0]
+    @test sol[:, 2] == [4, 4, 0, 4, 2, 0, 4, 0, 0, 4, 2, 0]
 
     # three 2-dimesnional layers
     two_dim_f(ds) = begin
@@ -172,7 +172,7 @@ end
     u0 = ones(Int64, 24)
     prob = DiscreteProblem(nd, u0, (0, 1))
     sol = solve(prob, FunctionMap())
-    @test sol[2] == [
+    @test sol[:, 2] == [
         2, 2, 2, 2, 0, 0,
         2, 2, 1, 1, 0, 0,
         2, 2, 0, 0, 0, 0,
@@ -200,7 +200,7 @@ end
     u0 = ones(Int64, 20)
     prob = DiscreteProblem(nd, u0, (0, 1))
     sol = solve(prob, FunctionMap())
-    @test sol[2] == [
+    @test sol[:, 2] == [
         2, 2, 4, 2, 2,
         2, 2, 4, 1, 1,
         2, 2, 4, 0, 0,
@@ -213,7 +213,7 @@ end
     u0 = ones(Int64, 20)
     prob = DiscreteProblem(nd, u0, (0, 1))
     sol = solve(prob, FunctionMap())
-    @test sol[2] == [
+    @test sol[:, 2] == [
         2, 1, 3, 2, 1,
         2, 2, 4, 1, 0,
         2, 2, 4, 0, -2,
