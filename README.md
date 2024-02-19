@@ -1,4 +1,5 @@
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://timvwese.github.io/General.jl/dev/)
+[![Build Status](https://github.com/General.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/TimVWese/General.jl/actions/workflows/CI.yml?query=branch%3Amaster)
+[![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://timvwese.github.io/General.jl/dev/)
 
 # General.jl
 
