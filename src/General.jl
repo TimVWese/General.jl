@@ -363,7 +363,7 @@ end
 ######################
 
 """
-    get_degree_distribution(g::Graph; degree_list=nothing)
+    degree_distribution(g::Graph; degree_list=nothing)
 
 Calculate the degree distribution of a given graph `g` as a tuple
 `(degree_list, degree_counts)`, such that `degree_counts[i]` is the number of
