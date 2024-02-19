@@ -66,6 +66,8 @@ end
 end
 
 @testitem "combined degree distribution" begin
+    using Graphs
+
     # For existing degree distributions
     dds = [
         ([1, 2, 3], [4, 5, 6]),
@@ -81,10 +83,10 @@ end
     @test aggregated_counts == [4, 12, 24, 20, 12]
 
     # Test from graphs
-    g1 = PathGraph(4) # degree distribution: [2, 2, 0]
-    g2 = StarGraph(4) # degree distribution: [3, 0, 1]
-    g3 = CycleGraph(4) # degree distribution: [0, 4, 0]
-    g4 = CompleteGraph(4) # degree distribution: [0, 0, 4]
+    g1 = path_graph(4) # degree distribution: [2, 2, 0]
+    g2 = star_graph(4) # degree distribution: [3, 0, 1]
+    g3 = cycle_graph(4) # degree distribution: [0, 4, 0]
+    g4 = complete_graph(4) # degree distribution: [0, 0, 4]
 
     # Call the function with the test data
     result = combined_degree_distribution(g1, g2, g3, g4)
@@ -97,9 +99,9 @@ end
     using Graphs
 
     # Create two simple graphs
-    g1 = PathGraph(5) # Graph with 5 vertices and 4 edges
-    g2 = StarGraph(5) # Graph with 5 vertices and 4 edges
-    g3 = CompleteGraph(5) # Graph with 5 vertices and 10 edges
+    g1 = path_graph(5) # Graph with 5 vertices and 4 edges
+    g2 = star_graph(5) # Graph with 5 vertices and 4 edges
+    g3 = complete_graph(5) # Graph with 5 vertices and 10 edges
 
     # Calculate the joint distribution
     result = joint_distribution(g1, g2, g3)
