@@ -10,8 +10,10 @@ export SF_configuration_model
 export spatial_network
 export permuted_circle
 export make_connected!
-export get_degree_distribution
+export degree_distribution
 export conditional_degree_distribution
+export combined_degree_distribution
+export joint_distribution
 export read_from_mtx, write_to_mtx
 export read_from_tsv
 export vietoris_rips, vietoris_rips_mink
@@ -355,12 +357,18 @@ function make_connected!(g::AbstractGraph)
     end
 end
 
+
+######################
+# Degree distribution
+######################
+
 """
-    get_degree_distribution(g::Graph)
+    get_degree_distribution(g::Graph; degree_list=nothing)
 
 Calculate the degree distribution of a given graph `g` as a tuple
 `(degree_list, degree_counts)`, such that `degree_counts[i]` is the number of
-nodes with degree `degree_list[i]`.
+nodes with degree `degree_list[i]`. `degree_list` can be given as an argument,
+in that case only the degrees in `degree_list` are considered.
 
 # Examples
 ```jldoctest
@@ -369,12 +377,14 @@ julia> get_degree_distribution(grid((3, 3, 3), periodic=true))
 ```
 
 """
-function get_degree_distribution(g::Graph)
+function degree_distribution(g::Graph; degree_list=nothing)
     degrees = degree(g)
     if isempty(degrees)
         return [], []
     end
-    degree_list = collect(minimum(degrees):maximum(degrees))
+    if isnothing(degree_list)
+        degree_list = collect(minimum(degrees):maximum(degrees))
+    end
     degree_counts = [count(x -> x == d, degrees) for d in degree_list]
     return degree_list, degree_counts
 end
@@ -404,6 +414,73 @@ function conditional_degree_distribution(g::AbstractGraph)
     return P
 end
 
+"""
+    combined_degree_distribution(dds::Vector{Tuple{Vector{Int}, Vector{Int}}})
+
+Combine the degree distributions of multiple graphs into one. The input is a
+vector of tuples, where each tuple contains a degree list and a count list.
+"""
+function combined_degree_distribution(dds::Vector{Tuple{Vector{Int}, Vector{Int}}})
+    degrees = [dd[1] for dd in dds]
+    counts = [dd[2] for dd in dds]
+
+    min_degree = minimum([minimum(d) for d in degrees])
+    max_degree = maximum([maximum(d) for d in degrees])
+    all_degrees = collect(min_degree:max_degree)
+    aggregated_counts = zeros(Int, length(all_degrees))
+
+    for i in eachindex(dds)
+        for j in eachindex(all_degrees)
+            if all_degrees[j] in degrees[i]
+                aggregated_counts[j] += counts[i][findfirst(x -> x == all_degrees[j], degrees[i])]
+            end
+        end
+    end
+    return all_degrees, aggregated_counts
+end
+
+"""
+    combined_degree_distribution(gs::AbstractGraph...)
+
+Combine the degree distributions of multiple graphs into one.
+"""
+function combined_degree_distribution(gs::AbstractGraph...)
+    return combined_degree_distribution([degree_distribution(g) for g in gs])
+end
+
+"""
+    joint_distribution(graphs::AbstractGraph...; count_condition = i -> true)
+
+Calculate the joint degree distribution P ∈ N^{nv(gs[1])^{length(gs)}} for a two layer
+multiplex network, with each `g` ∈ `gs` being a layer. The joint degree distribution
+is a matrix `P` where each element `P[i1, i2, ...]` represents the number of nodes
+with degree `i1` in the first layer, `i2` in the second layer, and so on. Only vertices
+for which `count_condition(i)` is `true` are considered.
+"""
+function joint_distribution(graphs::AbstractGraph...; count_condition = i -> true)
+    degrees = [degree(g) for g in graphs]
+    max_degrees = [maximum(k) for k in degrees]
+    n = nv(graphs[1])
+    @assert all(nv(g) == n for g in graphs)
+    P = zeros(Int, max_degrees...)
+    for i in 1:n
+        if count_condition(i)
+            idx = [k[i] for k in degrees]
+            P[idx...] += 1
+        end
+    end
+    return P
+end
+
+############
+# Graph IO
+############
+
+"""
+    append_mtx(filename)
+
+Add the extension `.mtx` to `filename` if it does not already have it.
+"""
 function append_mtx(filename)
     if length(filename) < 4 || filename[end-3:end] != ".mtx"
         filename = filename * ".mtx"
