@@ -14,6 +14,7 @@ export degree_distribution
 export conditional_degree_distribution
 export combined_degree_distribution
 export joint_distribution
+export bowtie_decomposition
 export read_from_mtx, write_to_mtx
 export read_from_tsv
 export vietoris_rips, vietoris_rips_mink
@@ -470,6 +471,57 @@ function joint_distribution(graphs::AbstractGraph...; count_condition = i -> tru
         end
     end
     return P
+end
+
+#################
+# Graph analysis
+#################
+function expand_w_neighbors(vertices::Set, g, neighborfn)
+    vertices = deepcopy(vertices)
+    new_neighbors = Set([n for v in vertices for n in neighborfn(g, v) if !(n in vertices)])
+    while !isempty(new_neighbors)
+        union!(vertices, new_neighbors)
+        new_neighbors = Set([n for v in new_neighbors for n in neighborfn(g, v) if !(n in vertices)])
+    end
+    return vertices
+end
+
+"""
+    bowtie_decomposition(g; full=false)
+
+Perform a bowtie decomposition on the directed graph `g`.
+
+# Returns
+- gscc::Set: The largest strongly connected component.
+- ginc::Set: All vertices upstream from the largest strongly connected component.
+- goutc::Set: All vertices downstream from the largest strongly connected component.
+Additionally, if `full=true`, the following sets are also returned:
+- tubes::Set: Connections from `ginc` to `goutc` that are not part of `gscc`.
+- outtendrils::Set: Vertices downstream from `ginc` that are not part of `gscc` or `tubes`.
+- intendrils::Set: Vertices upstream from `goutc` that are not part of `gscc` or `tubes`.
+"""
+function bowtie_decomposition(g; full=false)
+    @assert is_directed(g)
+    # Find the largest strongly connected component
+    sccs = strongly_connected_components(g)
+    gscc = Set(sccs[argmax(length.(sccs))])
+    assigned = deepcopy(gscc)
+    # Find all vertices upstream from it
+    ginc = setdiff(expand_w_neighbors(gscc, g, inneighbors), assigned)
+    # Find all vertices downstream from it
+    goutc = setdiff(expand_w_neighbors(gscc, g, outneighbors), assigned)
+
+    if !full
+        return gscc, ginc, goutc
+    else
+        union!(assigned, ginc, goutc)
+        outtendrils = setdiff(expand_w_neighbors(ginc, g, outneighbors), assigned)
+        intendrils = setdiff(expand_w_neighbors(goutc, g, inneighbors), assigned)
+        tubes = intersect(outtendrils, intendrils)
+        outtendrils = setdiff(outtendrils, tubes)
+        intendrils = setdiff(intendrils, tubes)
+        return gscc, ginc, goutc, tubes, outtendrils, intendrils
+    end
 end
 
 ############

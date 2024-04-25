@@ -175,15 +175,15 @@ end
 @testitem "Connectedness" begin
     using Graphs
 
-    erg = erdos_renyi(100, 0.005)
-    while length(connected_components(erg)) < 2
-        erg = erdos_renyi(100, 0.005)
+    er = erdos_renyi(100, 0.005)
+    while length(connected_components(er)) < 2
+        er = erdos_renyi(100, 0.005)
     end
-    nvg = nv(erg)
-    make_connected!(erg)
-    @test nvg == nv(erg)
-    @test length(connected_components(erg)) == 1
-    gc = copy(erg)
-    make_connected!(erg)
-    @test gc == erg
+    nvg = nv(er)
+    make_connected!(er)
+    @test nvg == nv(er)
+    @test length(connected_components(er)) == 1
+    gc = copy(er)
+    make_connected!(er)
+    @test gc == er
 end
