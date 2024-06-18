@@ -421,7 +421,7 @@ end
 Combine the degree distributions of multiple graphs into one. The input is a
 vector of tuples, where each tuple contains a degree list and a count list.
 """
-function combined_degree_distribution(dds::Vector{Tuple{Vector{Int}, Vector{Int}}})
+function combined_degree_distribution(dds::Vector{Tuple{Vector{Int},Vector{Int}}})
     degrees = [dd[1] for dd in dds]
     counts = [dd[2] for dd in dds]
 
@@ -458,7 +458,7 @@ is a matrix `P` where each element `P[i1, i2, ...]` represents the number of nod
 with degree `i1` in the first layer, `i2` in the second layer, and so on. Only vertices
 for which `count_condition(i)` is `true` are considered.
 """
-function joint_distribution(graphs::AbstractGraph...; count_condition = i -> true)
+function joint_distribution(graphs::AbstractGraph...; count_condition=i -> true)
     degrees = [degree(g) for g in graphs]
     max_degrees = [maximum(k) for k in degrees]
     n = nv(graphs[1])
@@ -476,14 +476,20 @@ end
 #################
 # Graph analysis
 #################
-function expand_w_neighbors(vertices::Set, g, neighborfn)
-    vertices = deepcopy(vertices)
-    new_neighbors = Set([n for v in vertices for n in neighborfn(g, v) if !(n in vertices)])
+function expand_neighbors(vertices::Set, g, neighborfn; to_ignore=Set())
+    expansion = Set()
+    new_neighbors = Set([
+        n for v in vertices for n in neighborfn(g, v)
+        if !(n in to_ignore)
+    ])
     while !isempty(new_neighbors)
-        union!(vertices, new_neighbors)
-        new_neighbors = Set([n for v in new_neighbors for n in neighborfn(g, v) if !(n in vertices)])
+        union!(expansion, new_neighbors)
+        new_neighbors = Set([
+            n for v in new_neighbors for n in neighborfn(g, v)
+            if !(n in expansion) && !(n in to_ignore)
+        ])
     end
-    return vertices
+    return expansion
 end
 
 """
@@ -507,16 +513,16 @@ function bowtie_decomposition(g; full=false)
     gscc = Set(sccs[argmax(length.(sccs))])
     assigned = deepcopy(gscc)
     # Find all vertices upstream from it
-    ginc = setdiff(expand_w_neighbors(gscc, g, inneighbors), assigned)
+    ginc = expand_neighbors(gscc, g, inneighbors; to_ignore=assigned)
     # Find all vertices downstream from it
-    goutc = setdiff(expand_w_neighbors(gscc, g, outneighbors), assigned)
+    goutc = expand_neighbors(gscc, g, outneighbors; to_ignore=assigned)
 
     if !full
         return gscc, ginc, goutc
     else
         union!(assigned, ginc, goutc)
-        outtendrils = setdiff(expand_w_neighbors(ginc, g, outneighbors), assigned)
-        intendrils = setdiff(expand_w_neighbors(goutc, g, inneighbors), assigned)
+        outtendrils = expand_neighbors(ginc, g, outneighbors; to_ignore=assigned)
+        intendrils = expand_neighbors(goutc, g, inneighbors; to_ignore=assigned)
         tubes = intersect(outtendrils, intendrils)
         outtendrils = setdiff(outtendrils, tubes)
         intendrils = setdiff(intendrils, tubes)
